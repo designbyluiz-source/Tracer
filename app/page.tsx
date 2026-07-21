@@ -1,4 +1,5 @@
 import { CasesTable } from "@/components/cases-table";
+import { NewCaseButton } from "@/components/new-case-dialog";
 import { createClient } from "@/lib/supabase/server";
 import type { EnrichedCase } from "@/lib/types";
 
@@ -15,11 +16,14 @@ export default async function HubPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Casos</h1>
-        <p className="text-sm text-muted-foreground">
-          Um registro por caso. Duplicidade é alerta, nunca bloqueio.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Casos</h1>
+          <p className="text-sm text-muted-foreground">
+            Um registro por caso. Duplicidade é alerta, nunca bloqueio.
+          </p>
+        </div>
+        <NewCaseButton />
       </div>
 
       {error ? (

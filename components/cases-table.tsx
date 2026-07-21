@@ -16,6 +16,7 @@ import {
   OwnerBadge,
   StageBadge,
 } from "@/components/case-badges";
+import { CaseDrawer } from "@/components/case-drawer";
 import { CASE_OWNERS, CASE_STAGES, type EnrichedCase } from "@/lib/types";
 import { formatAmount, formatDate } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ export function CasesTable({ cases }: { cases: EnrichedCase[] }) {
   const [query, setQuery] = useState("");
   const [owner, setOwner] = useState<string>("all");
   const [stage, setStage] = useState<string>("all");
+  const [selected, setSelected] = useState<EnrichedCase | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -106,7 +108,11 @@ export function CasesTable({ cases }: { cases: EnrichedCase[] }) {
             </TableRow>
           ) : (
             filtered.map((c) => (
-              <TableRow key={c.id}>
+              <TableRow
+                key={c.id}
+                onClick={() => setSelected(c)}
+                className="cursor-pointer"
+              >
                 <TableCell className="font-mono text-xs text-secondary-foreground">
                   {c.case_number}
                 </TableCell>
@@ -146,6 +152,12 @@ export function CasesTable({ cases }: { cases: EnrichedCase[] }) {
           )}
         </TableBody>
       </Table>
+
+      <CaseDrawer
+        caseItem={selected}
+        open={selected !== null}
+        onClose={() => setSelected(null)}
+      />
     </div>
   );
 }
