@@ -40,6 +40,7 @@ export interface CaseRow {
   clearing_comment: string | null;
   treasury_comment: string | null;
   tech_comment: string | null;
+  merged_into: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -60,6 +61,7 @@ export type MissingField =
  * times que só mandam um dos dois. O front lê SEMPRE daqui para leitura.
  */
 export interface EnrichedCase extends CaseRow {
+  merged_into_number: string | null;
   dup_order: boolean;
   dup_e2e: boolean;
   dup_order_cases: string[];
@@ -108,4 +110,6 @@ export const FIELD_LABELS: Record<string, string> = {
   clearing_comment: "Parecer Clearing",
   treasury_comment: "Parecer Treasury",
   tech_comment: "Parecer Tech",
+  merged: "Recebeu unificação de",
+  merged_into: "Mesclado em",
 };

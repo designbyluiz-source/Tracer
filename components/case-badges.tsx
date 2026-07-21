@@ -1,4 +1,4 @@
-import { AlertTriangle, Info } from "lucide-react";
+import { AlertTriangle, GitMerge, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { CaseOwner, CaseStatus } from "@/lib/types";
 
@@ -57,6 +57,16 @@ export function DupE2eBadge({ cases }: { cases: string[] }) {
     >
       <AlertTriangle className="h-3 w-3" />
       Dup. E2E
+    </Badge>
+  );
+}
+
+/** Caso que foi mesclado em outro (master). */
+export function MergedBadge({ into }: { into: string | null }) {
+  return (
+    <Badge variant="neutral" title={into ? `Mesclado em ${into}` : "Mesclado"}>
+      <GitMerge className="h-3 w-3" />
+      {into ? `→ ${into}` : "Mesclado"}
     </Badge>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from "@/components/case-badges";
 import { CaseFields, toPayload, useCaseForm } from "@/components/case-form";
 import { CaseHistory } from "@/components/case-history";
+import { MergePanel } from "@/components/merge-panel";
 import { createClient } from "@/lib/supabase/client";
 import type { EnrichedCase, TeamArea } from "@/lib/types";
 
@@ -69,6 +70,7 @@ function DrawerInner({
   }
 
   const hasDup = caseItem.dup_order || caseItem.dup_e2e;
+  const isMerged = caseItem.merged_into !== null;
 
   return (
     <Sheet
@@ -95,12 +97,26 @@ function DrawerInner({
           <Button variant="ghost" onClick={onClose} disabled={saving}>
             Cancelar
           </Button>
-          <Button variant="primary" onClick={handleSave} disabled={saving}>
+          <Button
+            variant="primary"
+            onClick={handleSave}
+            disabled={saving || isMerged}
+          >
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </>
       }
     >
+      {isMerged && (
+        <p className="mb-4 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-secondary-foreground">
+          Este caso foi mesclado em{" "}
+          <span className="font-mono text-foreground">
+            {caseItem.merged_into_number}
+          </span>
+          . Ele está travado — edite o caso master.
+        </p>
+      )}
+
       {(hasDup || caseItem.missing_info.length > 0) && (
         <div className="mb-4 flex flex-wrap gap-1.5">
           {caseItem.dup_order && <DupOrderBadge cases={caseItem.dup_order_cases} />}
@@ -132,8 +148,12 @@ function DrawerInner({
               .{" "}
             </>
           )}
-          Vincular é decisão humana — isto é só um alerta.
+          Vincular é decisão humana — use "Unificar" abaixo se for o mesmo caso.
         </p>
+      )}
+
+      {!isMerged && hasDup && (
+        <MergePanel current={caseItem} onDone={onClose} />
       )}
 
       {error && (

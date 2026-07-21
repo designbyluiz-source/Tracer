@@ -13,6 +13,7 @@ import {
 import {
   DupE2eBadge,
   DupOrderBadge,
+  MergedBadge,
   MissingInfoBadge,
   STATUS_VARIANT,
 } from "@/components/case-badges";
@@ -42,9 +43,21 @@ const VARIANT_TEXT: Record<string, string> = {
  * filtro por cima da mesma tabela; owner/status/busca seguem valendo dentro.
  */
 const BUCKETS: { id: string; label: string; match: (c: EnrichedCase) => boolean }[] = [
-  { id: "open", label: "Em aberto", match: (c) => c.status !== "Resolved" },
-  { id: "escalated", label: "Escalados", match: (c) => c.status === "Escalated" },
-  { id: "resolved", label: "Resolvidos", match: (c) => c.status === "Resolved" },
+  {
+    id: "open",
+    label: "Em aberto",
+    match: (c) => c.status !== "Resolved" && !c.merged_into,
+  },
+  {
+    id: "escalated",
+    label: "Escalados",
+    match: (c) => c.status === "Escalated" && !c.merged_into,
+  },
+  {
+    id: "resolved",
+    label: "Resolvidos",
+    match: (c) => c.status === "Resolved" && !c.merged_into,
+  },
   { id: "all", label: "Todos", match: () => true },
 ];
 
@@ -188,6 +201,7 @@ export function CasesTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
+                    {c.merged_into && <MergedBadge into={c.merged_into_number} />}
                     {c.dup_order && <DupOrderBadge cases={c.dup_order_cases} />}
                     {c.dup_e2e && <DupE2eBadge cases={c.dup_e2e_cases} />}
                     {c.missing_info.length > 0 && <MissingInfoBadge missing={c.missing_info} />}

@@ -93,7 +93,11 @@ Para ativar: no **SQL Editor** do Supabase, rode
 ## v3 (em andamento)
 
 - **Abas por bucket** na tabela: Em aberto · Escalados · Resolvidos · Todos, com contador. (feito)
+- **Unificar duplicados** (merge): no drawer de um caso duplicado, botão "Unificar" — você escolhe o master; o outro fica travado e marcado "Mesclado em UC-xxx" (não é apagado). O master preenche o que faltava e reúne os pareceres. (feito)
+
+  Para ativar: rode `supabase/migrations/0004_merge_cases.sql` no SQL Editor.
 
 ## Depois
 
-- Dashboard com gráficos, vínculo manual de casos, notificações de prazo, import do CSV, realtime.
+- Dashboard com gráficos, notificações de prazo, import do CSV, realtime.
+- Notificação por email/push de prazo (precisa de infra extra — agendador/serviço de email).
