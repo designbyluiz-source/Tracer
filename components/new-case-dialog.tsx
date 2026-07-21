@@ -11,7 +11,7 @@ import {
   useCaseForm,
   type CaseFormValues,
 } from "@/components/case-form";
-import { createClient } from "@/lib/supabase/client";
+import { insertCase } from "@/lib/cases";
 import type { TeamArea } from "@/lib/types";
 
 /**
@@ -38,9 +38,9 @@ export function NewCaseButton({ area }: { area: TeamArea }) {
         Novo caso
       </Button>
 
-      {open && (
-        <NewCaseForm
+      <NewCaseForm
           key={formKey}
+          open={open}
           area={area}
           saving={saving}
           error={error}
@@ -48,11 +48,8 @@ export function NewCaseButton({ area }: { area: TeamArea }) {
           onSubmit={async (values) => {
             setSaving(true);
             setError(null);
-            const supabase = createClient();
             // case_number vem do trigger; last_updated_by = área logada.
-            const { error } = await supabase
-              .from("cases")
-              .insert({ ...toPayload(values), last_updated_by: area });
+            const { error } = await insertCase(toPayload(values), area);
             setSaving(false);
             if (error) {
               setError(error.message);
@@ -62,18 +59,19 @@ export function NewCaseButton({ area }: { area: TeamArea }) {
             setOpen(false);
           }}
         />
-      )}
     </>
   );
 }
 
 function NewCaseForm({
+  open,
   area,
   saving,
   error,
   onClose,
   onSubmit,
 }: {
+  open: boolean;
   area: TeamArea;
   saving: boolean;
   error: string | null;
@@ -84,7 +82,7 @@ function NewCaseForm({
 
   return (
     <Sheet
-      open
+      open={open}
       onClose={onClose}
       title="Novo caso"
       description="Registre com o que tiver. Só 'Reportado por' é obrigatório."

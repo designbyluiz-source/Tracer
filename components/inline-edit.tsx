@@ -2,26 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { updateCaseField } from "@/lib/cases";
 import type { TeamArea } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-/**
- * Grava uma mudança de um campo do caso, já carimbando last_updated_by com a
- * área logada (o trigger de auditoria usa isso para o histórico).
- */
-async function saveField(
-  caseId: string,
-  field: string,
-  value: string | number | null,
-  area: TeamArea
-) {
-  const supabase = createClient();
-  return supabase
-    .from("cases")
-    .update({ [field]: value, last_updated_by: area })
-    .eq("id", caseId);
-}
 
 /** Dropdown editável direto na célula da tabela. Grava ao mudar. */
 export function InlineSelect({
@@ -49,7 +32,7 @@ export function InlineSelect({
     setLocal(next); // otimista
     setErr(false);
     start(async () => {
-      const { error } = await saveField(caseId, field, next, area);
+      const { error } = await updateCaseField(caseId, field, next, area);
       if (error) {
         setLocal(prev);
         setErr(true);
@@ -86,11 +69,13 @@ export function InlineDate({
   field,
   value,
   area,
+  tone,
 }: {
   caseId: string;
   field: string;
   value: string | null;
   area: TeamArea;
+  tone?: "overdue" | "soon" | null;
 }) {
   const router = useRouter();
   const [local, setLocal] = useState(value ?? "");
@@ -99,7 +84,7 @@ export function InlineDate({
   function onChange(next: string) {
     setLocal(next);
     start(async () => {
-      await saveField(caseId, field, next === "" ? null : next, area);
+      await updateCaseField(caseId, field, next === "" ? null : next, area);
       router.refresh();
     });
   }
@@ -111,7 +96,14 @@ export function InlineDate({
       disabled={pending}
       onClick={(e) => e.stopPropagation()}
       onChange={(e) => onChange(e.target.value)}
-      className="w-[140px] rounded-md border border-border bg-card px-2 py-1 text-xs tabular-nums text-secondary-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+      className={cn(
+        "w-[140px] rounded-md border bg-card px-2 py-1 text-xs tabular-nums focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60",
+        tone === "overdue"
+          ? "border-danger text-danger"
+          : tone === "soon"
+            ? "border-warning text-warning"
+            : "border-border text-secondary-foreground"
+      )}
     />
   );
 }

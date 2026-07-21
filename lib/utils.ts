@@ -15,9 +15,19 @@ export function formatAmount(value: number | null): string {
   }).format(value);
 }
 
-/** Formata data ISO (YYYY-MM-DD) para dd/mm/aaaa. Retorna "—" quando ausente. */
-export function formatDate(value: string | null): string {
-  if (!value) return "—";
-  const [y, m, d] = value.split("-");
-  return `${d}/${m}/${y}`;
+/**
+ * Saneia uma URL para uso em href: só aceita http(s). Evita esquemas perigosos
+ * como javascript: em links vindos de dados (ex.: task_url). Retorna null se
+ * não for uma URL http(s) válida.
+ */
+export function safeHttpUrl(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
 }

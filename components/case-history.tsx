@@ -1,8 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { fetchCaseEvents } from "@/lib/cases";
 import { FIELD_LABELS, type CaseEvent } from "@/lib/types";
+
+/** Descreve um evento do histórico em uma linha legível. */
+function describe(e: CaseEvent): string {
+  const label = FIELD_LABELS[e.field] ?? e.field;
+  if (e.field === "created") return "Caso criado";
+  if (e.field === "merged") return `${label} ${e.new_value ?? ""}`.trim();
+  if (e.field === "merged_into") return `${label} ${e.new_value ?? ""}`.trim();
+  if (e.field === "status" && e.old_value && e.new_value) {
+    return `${label}: ${e.old_value} → ${e.new_value}`;
+  }
+  if (e.field === "current_owner" && e.new_value) {
+    return `${label}: ${e.old_value ?? "—"} → ${e.new_value}`;
+  }
+  return `${label} atualizado`;
+}
 
 /** Timeline de alterações de um caso (lê de case_events). */
 export function CaseHistory({ caseId }: { caseId: string }) {
@@ -10,15 +25,9 @@ export function CaseHistory({ caseId }: { caseId: string }) {
 
   useEffect(() => {
     let active = true;
-    (async () => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("case_events")
-        .select("*")
-        .eq("case_id", caseId)
-        .order("created_at", { ascending: false });
-      if (active) setEvents((data as CaseEvent[]) ?? []);
-    })();
+    fetchCaseEvents(caseId).then((data) => {
+      if (active) setEvents(data);
+    });
     return () => {
       active = false;
     };
@@ -41,13 +50,7 @@ export function CaseHistory({ caseId }: { caseId: string }) {
               <span className="font-medium text-foreground">
                 {e.changed_by ?? "—"}
               </span>{" "}
-              · {FIELD_LABELS[e.field] ?? e.field}
-              {e.field === "status" && e.old_value && e.new_value && (
-                <>
-                  : <span className="text-muted-foreground">{e.old_value}</span> →{" "}
-                  <span className="text-foreground">{e.new_value}</span>
-                </>
-              )}
+              · {describe(e)}
             </p>
             <p className="text-muted-foreground">
               {new Date(e.created_at).toLocaleString("pt-BR")}

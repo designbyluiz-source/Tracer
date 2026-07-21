@@ -26,7 +26,9 @@ import {
   type EnrichedCase,
   type TeamArea,
 } from "@/lib/types";
+import { deadlineCounts, dueTone } from "@/lib/deadlines";
 import { formatAmount } from "@/lib/utils";
+import { AlertTriangle, Clock } from "lucide-react";
 
 /** Cor do texto do dropdown de status, casando com a paleta. */
 const VARIANT_TEXT: Record<string, string> = {
@@ -72,7 +74,20 @@ export function CasesTable({
   const [query, setQuery] = useState("");
   const [owner, setOwner] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
+  const [due, setDue] = useState<"all" | "overdue" | "soon">("all");
   const [selected, setSelected] = useState<EnrichedCase | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  function openCase(c: EnrichedCase) {
+    setSelected(c);
+    setDrawerOpen(true);
+  }
+  function closeCase() {
+    setDrawerOpen(false);
+    setTimeout(() => setSelected(null), 220); // deixa a animação de saída rodar
+  }
+
+  const deadlines = useMemo(() => deadlineCounts(cases), [cases]);
 
   // Contador de cada aba (sempre sobre a lista completa).
   const counts = useMemo(
@@ -89,15 +104,71 @@ export function CasesTable({
       if (!activeBucket.match(c)) return false;
       if (owner !== "all" && c.current_owner !== owner) return false;
       if (status !== "all" && c.status !== status) return false;
+      if (due !== "all" && dueTone(c.due_date, c.status) !== due) return false;
       if (!q) return true;
       return [c.case_number, c.summary, c.account_id, c.order_id, c.e2e_id, c.tax_id]
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(q));
     });
-  }, [cases, activeBucket, query, owner, status]);
+  }, [cases, activeBucket, query, owner, status, due]);
 
   return (
     <div className="space-y-4">
+      {/* Aviso de prazos (notificações) */}
+      {(deadlines.overdue > 0 || deadlines.soon > 0) && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-warning/40 bg-warning/10 px-4 py-2.5 text-sm">
+          <AlertTriangle className="h-4 w-4 text-warning" />
+          <span className="text-secondary-foreground">
+            {deadlines.overdue > 0 && (
+              <>
+                <span className="font-semibold text-danger">
+                  {deadlines.overdue}
+                </span>{" "}
+                vencido{deadlines.overdue > 1 ? "s" : ""}
+              </>
+            )}
+            {deadlines.overdue > 0 && deadlines.soon > 0 && " · "}
+            {deadlines.soon > 0 && (
+              <>
+                <span className="font-semibold text-warning">
+                  {deadlines.soon}
+                </span>{" "}
+                vencendo em breve
+              </>
+            )}
+          </span>
+          <div className="ml-auto flex gap-1.5">
+            {deadlines.overdue > 0 && (
+              <button
+                onClick={() => setDue(due === "overdue" ? "all" : "overdue")}
+                className={
+                  "rounded-md px-2 py-1 text-xs font-medium transition-colors " +
+                  (due === "overdue"
+                    ? "bg-danger/20 text-danger"
+                    : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                Ver vencidos
+              </button>
+            )}
+            {deadlines.soon > 0 && (
+              <button
+                onClick={() => setDue(due === "soon" ? "all" : "soon")}
+                className={
+                  "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors " +
+                  (due === "soon"
+                    ? "bg-warning/20 text-warning"
+                    : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                <Clock className="h-3 w-3" />
+                Vencendo
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Abas por bucket de andamento */}
       <div className="flex flex-wrap items-center gap-1 border-b border-border">
         {BUCKETS.map((b) => {
@@ -169,7 +240,7 @@ export function CasesTable({
             </TableRow>
           ) : (
             filtered.map((c) => (
-              <TableRow key={c.id} onClick={() => setSelected(c)} className="cursor-pointer">
+              <TableRow key={c.id} onClick={() => openCase(c)} className="cursor-pointer">
                 <TableCell className="font-mono text-xs text-secondary-foreground">
                   {c.case_number}
                 </TableCell>
@@ -197,7 +268,13 @@ export function CasesTable({
                   {formatAmount(c.amount)}
                 </TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
-                  <InlineDate caseId={c.id} field="due_date" value={c.due_date} area={area} />
+                  <InlineDate
+                    caseId={c.id}
+                    field="due_date"
+                    value={c.due_date}
+                    area={area}
+                    tone={dueTone(c.due_date, c.status)}
+                  />
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
@@ -219,8 +296,8 @@ export function CasesTable({
       <CaseDrawer
         caseItem={selected}
         area={area}
-        open={selected !== null}
-        onClose={() => setSelected(null)}
+        open={drawerOpen}
+        onClose={closeCase}
       />
     </div>
   );

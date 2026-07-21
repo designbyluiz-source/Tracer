@@ -13,8 +13,9 @@ import {
 import { CaseFields, toPayload, useCaseForm } from "@/components/case-form";
 import { CaseHistory } from "@/components/case-history";
 import { MergePanel } from "@/components/merge-panel";
-import { createClient } from "@/lib/supabase/client";
+import { updateCase } from "@/lib/cases";
 import type { EnrichedCase, TeamArea } from "@/lib/types";
+import { safeHttpUrl } from "@/lib/utils";
 
 export function CaseDrawer({
   caseItem,
@@ -33,6 +34,8 @@ export function CaseDrawer({
   );
 }
 
+type Tab = "details" | "history";
+
 function DrawerInner({
   caseItem,
   area,
@@ -46,20 +49,24 @@ function DrawerInner({
 }) {
   const router = useRouter();
   const { values, set } = useCaseForm(area, caseItem);
+  const [tab, setTab] = useState<Tab>("details");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => setError(null), [open]);
+  // Reset ao (re)abrir.
+  useEffect(() => {
+    setError(null);
+    setTab("details");
+  }, [open]);
+
+  const hasDup = caseItem.dup_order || caseItem.dup_e2e;
+  const isMerged = caseItem.merged_into !== null;
+  const taskUrl = safeHttpUrl(caseItem.task_url);
 
   async function handleSave() {
     setSaving(true);
     setError(null);
-    const supabase = createClient();
-    // last_updated_by = área logada -> alimenta o histórico automaticamente.
-    const { error } = await supabase
-      .from("cases")
-      .update({ ...toPayload(values), last_updated_by: area })
-      .eq("id", caseItem.id);
+    const { error } = await updateCase(caseItem.id, toPayload(values), area);
     setSaving(false);
     if (error) {
       setError(error.message);
@@ -68,9 +75,6 @@ function DrawerInner({
     router.refresh();
     onClose();
   }
-
-  const hasDup = caseItem.dup_order || caseItem.dup_e2e;
-  const isMerged = caseItem.merged_into !== null;
 
   return (
     <Sheet
@@ -81,9 +85,14 @@ function DrawerInner({
           <span className="font-mono text-sm text-secondary-foreground">
             {caseItem.case_number}
           </span>
-          {caseItem.task_url && (
-            <a href={caseItem.task_url} target="_blank" rel="noreferrer"
-              className="text-muted-foreground hover:text-primary" title="Abrir tarefa">
+          {taskUrl && (
+            <a
+              href={taskUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-muted-foreground hover:text-primary"
+              title="Abrir tarefa"
+            >
               <ExternalLink className="h-4 w-4" />
             </a>
           )}
@@ -93,83 +102,95 @@ function DrawerInner({
         caseItem.created_at
       ).toLocaleDateString("pt-BR")}`}
       footer={
-        <>
-          <Button variant="ghost" onClick={onClose} disabled={saving}>
-            Cancelar
+        tab === "details" ? (
+          <>
+            <Button variant="ghost" onClick={onClose} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+              disabled={saving || isMerged}
+            >
+              {saving ? "Salvando..." : "Salvar"}
+            </Button>
+          </>
+        ) : (
+          <Button variant="ghost" onClick={onClose}>
+            Fechar
           </Button>
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            disabled={saving || isMerged}
-          >
-            {saving ? "Salvando..." : "Salvar"}
-          </Button>
-        </>
+        )
       }
     >
-      {isMerged && (
-        <p className="mb-4 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-secondary-foreground">
-          Este caso foi mesclado em{" "}
-          <span className="font-mono text-foreground">
-            {caseItem.merged_into_number}
-          </span>
-          . Ele está travado — edite o caso master.
-        </p>
-      )}
-
-      {(hasDup || caseItem.missing_info.length > 0) && (
-        <div className="mb-4 flex flex-wrap gap-1.5">
-          {caseItem.dup_order && <DupOrderBadge cases={caseItem.dup_order_cases} />}
-          {caseItem.dup_e2e && <DupE2eBadge cases={caseItem.dup_e2e_cases} />}
-          {caseItem.missing_info.length > 0 && (
-            <MissingInfoBadge missing={caseItem.missing_info} />
-          )}
-        </div>
-      )}
-
-      {hasDup && (
-        <p className="mb-4 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-secondary-foreground">
-          ⚠️{" "}
-          {caseItem.dup_order && (
-            <>
-              Mesmo Order ID de{" "}
-              <span className="font-medium text-primary">
-                {caseItem.dup_order_cases.join(", ")}
-              </span>
-              .{" "}
-            </>
-          )}
-          {caseItem.dup_e2e && (
-            <>
-              Mesmo E2E ID de{" "}
-              <span className="font-medium text-primary">
-                {caseItem.dup_e2e_cases.join(", ")}
-              </span>
-              .{" "}
-            </>
-          )}
-          Vincular é decisão humana — use "Unificar" abaixo se for o mesmo caso.
-        </p>
-      )}
-
-      {!isMerged && hasDup && (
-        <MergePanel current={caseItem} onDone={onClose} />
-      )}
-
-      {error && (
-        <p className="mb-4 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
-          Erro ao salvar: {error}
-        </p>
-      )}
-
-      <CaseFields values={values} set={set} mode="edit" area={area} />
-
-      <section className="mt-6 border-t border-border pt-4">
-        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      {/* Abas */}
+      <div className="mb-4 flex gap-1 border-b border-border">
+        <TabButton active={tab === "details"} onClick={() => setTab("details")}>
+          Detalhes
+        </TabButton>
+        <TabButton active={tab === "history"} onClick={() => setTab("history")}>
           Histórico
-        </p>
+        </TabButton>
+      </div>
+
+      {tab === "history" ? (
         <CaseHistory caseId={caseItem.id} />
-      </section>
+      ) : (
+        <>
+          {isMerged && (
+            <p className="mb-4 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-secondary-foreground">
+              Este caso foi mesclado em{" "}
+              <span className="font-mono text-foreground">
+                {caseItem.merged_into_number}
+              </span>
+              . Ele está travado — edite o caso master.
+            </p>
+          )}
+
+          {(hasDup || caseItem.missing_info.length > 0) && (
+            <div className="mb-4 flex flex-wrap gap-1.5">
+              {caseItem.dup_order && <DupOrderBadge cases={caseItem.dup_order_cases} />}
+              {caseItem.dup_e2e && <DupE2eBadge cases={caseItem.dup_e2e_cases} />}
+              {caseItem.missing_info.length > 0 && (
+                <MissingInfoBadge missing={caseItem.missing_info} />
+              )}
+            </div>
+          )}
+
+          {!isMerged && hasDup && <MergePanel current={caseItem} onDone={onClose} />}
+
+          {error && (
+            <p className="mb-4 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-xs text-danger">
+              Erro ao salvar: {error}
+            </p>
+          )}
+
+          <CaseFields values={values} set={set} mode="edit" area={area} />
+        </>
+      )}
     </Sheet>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={
+        "-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors " +
+        (active
+          ? "border-primary text-primary"
+          : "border-transparent text-muted-foreground hover:text-foreground")
+      }
+    >
+      {children}
+    </button>
   );
 }

@@ -23,8 +23,23 @@ export function Sheet({
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
+  // Mantém o componente montado durante a animação de saída.
+  const [render, setRender] = React.useState(open);
+  const [leaving, setLeaving] = React.useState(false);
+
   React.useEffect(() => {
-    if (!open) return;
+    if (open) {
+      setRender(true);
+      setLeaving(false);
+    } else if (render) {
+      setLeaving(true);
+      const t = setTimeout(() => setRender(false), 200);
+      return () => clearTimeout(t);
+    }
+  }, [open, render]);
+
+  React.useEffect(() => {
+    if (!render) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -35,15 +50,17 @@ export function Sheet({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, onClose]);
+  }, [render, onClose]);
 
-  if (!open) return null;
+  if (!render) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       {/* Overlay */}
       <div
-        className="absolute inset-0 bg-black/60 animate-in fade-in"
+        className={`absolute inset-0 bg-black/60 duration-200 ${
+          leaving ? "animate-out fade-out" : "animate-in fade-in"
+        }`}
         onClick={onClose}
         aria-hidden
       />
@@ -51,7 +68,11 @@ export function Sheet({
       <div
         role="dialog"
         aria-modal="true"
-        className="relative flex h-full w-full max-w-[540px] flex-col border-l border-border bg-elevated shadow-xl animate-in slide-in-from-right"
+        className={`relative flex h-full w-full max-w-[540px] flex-col border-l border-border bg-elevated shadow-2xl duration-200 ${
+          leaving
+            ? "animate-out slide-out-to-right"
+            : "animate-in slide-in-from-right"
+        }`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
           <div className="min-w-0">

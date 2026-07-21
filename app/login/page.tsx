@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/sheet";
 import { createClient } from "@/lib/supabase/client";
@@ -33,17 +34,32 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      {/* Brilho amarelo de fundo */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full opacity-20 blur-3xl tr-grad-primary"
+      />
+
       <form
         onSubmit={handleLogin}
-        className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-card p-6"
+        className="tr-in tr-card relative w-full max-w-sm space-y-5 p-7"
       >
-        <div className="space-y-1">
-          <h1 className="text-lg font-bold tracking-tight text-primary">
+        <div className="flex items-center gap-2.5">
+          <span className="tr-grad-primary tr-grad-glow flex h-9 w-9 items-center justify-center rounded-xl text-primary-foreground">
+            <Activity className="h-5 w-5" />
+          </span>
+          <span className="text-xl font-bold tracking-tight text-foreground">
             Tracer
+          </span>
+        </div>
+
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">
+            Entrar na sua área
           </h1>
           <p className="text-sm text-muted-foreground">
-            Entre com o login da sua área.
+            Use o login da sua área para acessar o hub.
           </p>
         </div>
 

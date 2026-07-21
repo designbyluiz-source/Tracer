@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { GitMerge } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { mergeCasesByNumber } from "@/lib/cases";
 import type { EnrichedCase } from "@/lib/types";
 
 /**
@@ -33,26 +33,10 @@ export function MergePanel({
   async function merge(masterNumber: string, secondaryNumber: string) {
     setBusy(true);
     setError(null);
-    const supabase = createClient();
-
-    const { data, error: e1 } = await supabase
-      .from("cases")
-      .select("id,case_number")
-      .in("case_number", [masterNumber, secondaryNumber]);
-    if (e1 || !data) {
-      setBusy(false);
-      setError(e1?.message ?? "Não consegui localizar os casos.");
-      return;
-    }
-    const map = Object.fromEntries(data.map((d) => [d.case_number, d.id]));
-
-    const { error: e2 } = await supabase.rpc("merge_cases", {
-      p_master: map[masterNumber],
-      p_secondary: map[secondaryNumber],
-    });
+    const { error } = await mergeCasesByNumber(masterNumber, secondaryNumber);
     setBusy(false);
-    if (e2) {
-      setError(e2.message);
+    if (error) {
+      setError(error.message);
       return;
     }
     router.refresh();

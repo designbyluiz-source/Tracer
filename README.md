@@ -72,6 +72,19 @@ User**) e crie 5 usuários com estes emails — a área é atribuída automatica
 
 Defina uma senha para cada. Pronto: cada área entra com o seu login em `/login`.
 
+### Usuário de teste
+
+Para só dar uma olhada na aplicação, use este login (área Operations, que enxerga
+e coordena tudo):
+
+- **Email:** `operations@tracer.local`
+- **Senha:** `tracer123`
+
+Crie-o pelo painel (Authentication → Add user, com Auto Confirm) ou rodando
+`supabase/seed_test_user.sql` no SQL Editor.
+
+> Login apenas para testes internos — troque a senha antes de qualquer uso real.
+
 ### O que muda na tela
 
 - **Login obrigatório** por área; a área logada aparece no topo, com botão "Sair".

@@ -7,9 +7,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Amarelo — ação primária (usar com parcimônia).
+        // Amarelo com degradê — ação primária (usar com parcimônia).
         primary:
-          "bg-primary text-primary-foreground hover:bg-primary-hover",
+          "tr-grad-primary text-primary-foreground shadow-sm hover:brightness-105 active:brightness-95",
         secondary:
           "border border-border bg-elevated text-foreground hover:bg-muted",
         ghost: "text-secondary-foreground hover:bg-elevated hover:text-foreground",
