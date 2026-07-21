@@ -1,21 +1,21 @@
 /**
- * Tipos do modelo de dados do Tracer.
+ * Tipos do modelo de dados do Tracer (v2).
  * Espelham os enums e a tabela `cases` + a view `cases_enriched` do Supabase
- * (ver supabase/migrations/0001_init.sql).
- *
- * Quando o schema mudar, o ideal em v1.1 é gerar estes tipos com o CLI do
- * Supabase (`supabase gen types typescript`). Por ora, mantidos à mão.
+ * (ver supabase/migrations/0001_init.sql e 0002_v2_auth_audit.sql).
  */
 
 export type TeamArea = "CS" | "Tech" | "Treasury" | "Clearing" | "Operations";
 
 export type CaseOwner = TeamArea | "Resolved";
 
-export type CaseStage =
+export type CaseStatus =
   | "New"
-  | "In Progress"
-  | "Waiting"
-  | "Need Information"
+  | "In Review"
+  | "Waiting for Treasury"
+  | "Waiting for Clearing"
+  | "Waiting for Operations"
+  | "Waiting for Tech"
+  | "Escalated"
   | "Resolved";
 
 /** Linha crua da tabela `cases`. */
@@ -31,7 +31,7 @@ export interface CaseRow {
   amount: number | null;
   summary: string | null;
   current_owner: CaseOwner;
-  stage: CaseStage;
+  status: CaseStatus;
   due_date: string | null;
   next_action: string | null;
   last_updated_by: TeamArea | null;
@@ -56,12 +56,26 @@ export type MissingField =
 
 /**
  * Linha da view `cases_enriched`: tudo de `cases` + dados derivados.
- * O front lê SEMPRE daqui (nunca da tabela crua para leitura).
+ * Duplicidade é feita por dois checks independentes (Order e E2E), já que há
+ * times que só mandam um dos dois. O front lê SEMPRE daqui para leitura.
  */
 export interface EnrichedCase extends CaseRow {
-  is_duplicate: boolean;
-  related_cases: string[];
+  dup_order: boolean;
+  dup_e2e: boolean;
+  dup_order_cases: string[];
+  dup_e2e_cases: string[];
   missing_info: MissingField[];
+}
+
+/** Uma linha do histórico de alterações (tabela case_events). */
+export interface CaseEvent {
+  id: string;
+  case_id: string;
+  changed_by: TeamArea | null;
+  field: string;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
 }
 
 export const TEAM_AREAS: TeamArea[] = [
@@ -74,10 +88,24 @@ export const TEAM_AREAS: TeamArea[] = [
 
 export const CASE_OWNERS: CaseOwner[] = [...TEAM_AREAS, "Resolved"];
 
-export const CASE_STAGES: CaseStage[] = [
+export const CASE_STATUSES: CaseStatus[] = [
   "New",
-  "In Progress",
-  "Waiting",
-  "Need Information",
+  "In Review",
+  "Waiting for Treasury",
+  "Waiting for Clearing",
+  "Waiting for Operations",
+  "Waiting for Tech",
+  "Escalated",
   "Resolved",
 ];
+
+/** Rótulos amigáveis dos campos do histórico. */
+export const FIELD_LABELS: Record<string, string> = {
+  created: "Caso criado",
+  status: "Status",
+  current_owner: "Owner",
+  op_comment: "Parecer Operations",
+  clearing_comment: "Parecer Clearing",
+  treasury_comment: "Parecer Treasury",
+  tech_comment: "Parecer Tech",
+};

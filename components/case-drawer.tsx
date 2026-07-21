@@ -6,48 +6,45 @@ import { ExternalLink } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import {
-  DuplicateBadge,
+  DupE2eBadge,
+  DupOrderBadge,
   MissingInfoBadge,
 } from "@/components/case-badges";
-import {
-  CaseFields,
-  toPayload,
-  useCaseForm,
-} from "@/components/case-form";
+import { CaseFields, toPayload, useCaseForm } from "@/components/case-form";
+import { CaseHistory } from "@/components/case-history";
 import { createClient } from "@/lib/supabase/client";
-import type { EnrichedCase } from "@/lib/types";
+import type { EnrichedCase, TeamArea } from "@/lib/types";
 
-/**
- * Drawer de detalhe de um caso: mostra flags, permite editar todos os campos
- * (incluindo os que faltam) e os 4 pareceres, e salva no Supabase.
- */
 export function CaseDrawer({
   caseItem,
+  area,
   open,
   onClose,
 }: {
   caseItem: EnrichedCase | null;
+  area: TeamArea;
   open: boolean;
   onClose: () => void;
 }) {
   if (!caseItem) return null;
-  // key força o form a resetar quando muda o caso selecionado.
   return (
-    <DrawerInner key={caseItem.id} caseItem={caseItem} open={open} onClose={onClose} />
+    <DrawerInner key={caseItem.id} caseItem={caseItem} area={area} open={open} onClose={onClose} />
   );
 }
 
 function DrawerInner({
   caseItem,
+  area,
   open,
   onClose,
 }: {
   caseItem: EnrichedCase;
+  area: TeamArea;
   open: boolean;
   onClose: () => void;
 }) {
   const router = useRouter();
-  const { values, set } = useCaseForm(caseItem);
+  const { values, set } = useCaseForm(area, caseItem);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,18 +54,21 @@ function DrawerInner({
     setSaving(true);
     setError(null);
     const supabase = createClient();
+    // last_updated_by = área logada -> alimenta o histórico automaticamente.
     const { error } = await supabase
       .from("cases")
-      .update(toPayload(values))
+      .update({ ...toPayload(values), last_updated_by: area })
       .eq("id", caseItem.id);
     setSaving(false);
     if (error) {
       setError(error.message);
       return;
     }
-    router.refresh(); // recarrega os dados do servidor
+    router.refresh();
     onClose();
   }
+
+  const hasDup = caseItem.dup_order || caseItem.dup_e2e;
 
   return (
     <Sheet
@@ -80,13 +80,8 @@ function DrawerInner({
             {caseItem.case_number}
           </span>
           {caseItem.task_url && (
-            <a
-              href={caseItem.task_url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-muted-foreground hover:text-primary"
-              title="Abrir tarefa"
-            >
+            <a href={caseItem.task_url} target="_blank" rel="noreferrer"
+              className="text-muted-foreground hover:text-primary" title="Abrir tarefa">
               <ExternalLink className="h-4 w-4" />
             </a>
           )}
@@ -106,25 +101,38 @@ function DrawerInner({
         </>
       }
     >
-      {/* Flags derivadas (somente leitura) */}
-      {(caseItem.is_duplicate || caseItem.missing_info.length > 0) && (
+      {(hasDup || caseItem.missing_info.length > 0) && (
         <div className="mb-4 flex flex-wrap gap-1.5">
-          {caseItem.is_duplicate && (
-            <DuplicateBadge related={caseItem.related_cases} />
-          )}
+          {caseItem.dup_order && <DupOrderBadge cases={caseItem.dup_order_cases} />}
+          {caseItem.dup_e2e && <DupE2eBadge cases={caseItem.dup_e2e_cases} />}
           {caseItem.missing_info.length > 0 && (
             <MissingInfoBadge missing={caseItem.missing_info} />
           )}
         </div>
       )}
 
-      {caseItem.is_duplicate && (
+      {hasDup && (
         <p className="mb-4 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-secondary-foreground">
-          ⚠️ Compartilha Order/E2E com{" "}
-          <span className="font-medium text-primary">
-            {caseItem.related_cases.join(", ")}
-          </span>
-          . Vincular é decisão humana — isto é só um alerta.
+          ⚠️{" "}
+          {caseItem.dup_order && (
+            <>
+              Mesmo Order ID de{" "}
+              <span className="font-medium text-primary">
+                {caseItem.dup_order_cases.join(", ")}
+              </span>
+              .{" "}
+            </>
+          )}
+          {caseItem.dup_e2e && (
+            <>
+              Mesmo E2E ID de{" "}
+              <span className="font-medium text-primary">
+                {caseItem.dup_e2e_cases.join(", ")}
+              </span>
+              .{" "}
+            </>
+          )}
+          Vincular é decisão humana — isto é só um alerta.
         </p>
       )}
 
@@ -135,6 +143,13 @@ function DrawerInner({
       )}
 
       <CaseFields values={values} set={set} mode="edit" />
+
+      <section className="mt-6 border-t border-border pt-4">
+        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Histórico
+        </p>
+        <CaseHistory caseId={caseItem.id} />
+      </section>
     </Sheet>
   );
 }

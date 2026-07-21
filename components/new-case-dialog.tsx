@@ -5,19 +5,24 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { CaseFields, toPayload, useCaseForm } from "@/components/case-form";
+import {
+  CaseFields,
+  toPayload,
+  useCaseForm,
+  type CaseFormValues,
+} from "@/components/case-form";
 import { createClient } from "@/lib/supabase/client";
+import type { TeamArea } from "@/lib/types";
 
 /**
  * Botão "Novo caso" + drawer de criação. Registro parcial: só reported_by é
- * obrigatório (o resto pode entrar depois; o sistema sinaliza o que falta).
+ * obrigatório. reported_by/owner já vêm com a área logada como padrão.
  */
-export function NewCaseButton() {
+export function NewCaseButton({ area }: { area: TeamArea }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Recria o form a cada abertura para começar limpo.
   const [formKey, setFormKey] = useState(0);
 
   function openNew() {
@@ -36,6 +41,7 @@ export function NewCaseButton() {
       {open && (
         <NewCaseForm
           key={formKey}
+          area={area}
           saving={saving}
           error={error}
           onClose={() => setOpen(false)}
@@ -43,8 +49,10 @@ export function NewCaseButton() {
             setSaving(true);
             setError(null);
             const supabase = createClient();
-            // case_number é gerado pelo trigger BEFORE INSERT no banco.
-            const { error } = await supabase.from("cases").insert(toPayload(values));
+            // case_number vem do trigger; last_updated_by = área logada.
+            const { error } = await supabase
+              .from("cases")
+              .insert({ ...toPayload(values), last_updated_by: area });
             setSaving(false);
             if (error) {
               setError(error.message);
@@ -60,17 +68,19 @@ export function NewCaseButton() {
 }
 
 function NewCaseForm({
+  area,
   saving,
   error,
   onClose,
   onSubmit,
 }: {
+  area: TeamArea;
   saving: boolean;
   error: string | null;
   onClose: () => void;
-  onSubmit: (values: ReturnType<typeof useCaseForm>["values"]) => void;
+  onSubmit: (values: CaseFormValues) => void;
 }) {
-  const { values, set } = useCaseForm();
+  const { values, set } = useCaseForm(area);
 
   return (
     <Sheet

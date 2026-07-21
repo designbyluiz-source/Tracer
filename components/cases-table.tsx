@@ -11,51 +11,60 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DuplicateBadge,
+  DupE2eBadge,
+  DupOrderBadge,
   MissingInfoBadge,
-  OwnerBadge,
-  StageBadge,
+  STATUS_VARIANT,
 } from "@/components/case-badges";
+import { InlineDate, InlineSelect } from "@/components/inline-edit";
 import { CaseDrawer } from "@/components/case-drawer";
-import { CASE_OWNERS, CASE_STAGES, type EnrichedCase } from "@/lib/types";
-import { formatAmount, formatDate } from "@/lib/utils";
+import {
+  CASE_OWNERS,
+  CASE_STATUSES,
+  TEAM_AREAS,
+  type EnrichedCase,
+  type TeamArea,
+} from "@/lib/types";
+import { formatAmount } from "@/lib/utils";
 
-/**
- * Tela-hub: tabela de casos lendo de `cases_enriched`.
- * Filtros por owner e stage + busca livre. Tudo client-side sobre os dados
- * já carregados no servidor (o volume no v1 é pequeno).
- * Drawer de detalhe e "novo caso" entram depois.
- */
-export function CasesTable({ cases }: { cases: EnrichedCase[] }) {
+/** Cor do texto do dropdown de status, casando com a paleta. */
+const VARIANT_TEXT: Record<string, string> = {
+  neutral: "text-secondary-foreground",
+  primary: "text-primary",
+  info: "text-info",
+  warning: "text-warning",
+  danger: "text-danger",
+  success: "text-success",
+};
+
+export function CasesTable({
+  cases,
+  area,
+}: {
+  cases: EnrichedCase[];
+  area: TeamArea;
+}) {
   const [query, setQuery] = useState("");
   const [owner, setOwner] = useState<string>("all");
-  const [stage, setStage] = useState<string>("all");
+  const [status, setStatus] = useState<string>("all");
   const [selected, setSelected] = useState<EnrichedCase | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return cases.filter((c) => {
       if (owner !== "all" && c.current_owner !== owner) return false;
-      if (stage !== "all" && c.stage !== stage) return false;
+      if (status !== "all" && c.status !== status) return false;
       if (!q) return true;
-      return [
-        c.case_number,
-        c.summary,
-        c.account_id,
-        c.order_id,
-        c.e2e_id,
-        c.tax_id,
-      ]
+      return [c.case_number, c.summary, c.account_id, c.order_id, c.e2e_id, c.tax_id]
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(q));
     });
-  }, [cases, query, owner, stage]);
+  }, [cases, query, owner, status]);
 
   return (
     <div className="space-y-4">
-      {/* Barra de filtros */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[220px]">
+        <div className="relative min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             value={query}
@@ -64,88 +73,75 @@ export function CasesTable({ cases }: { cases: EnrichedCase[] }) {
             className="h-9 w-full rounded-md border border-input bg-card pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
-
-        <FilterSelect
-          label="Owner"
-          value={owner}
-          onChange={setOwner}
-          options={CASE_OWNERS}
-        />
-        <FilterSelect
-          label="Stage"
-          value={stage}
-          onChange={setStage}
-          options={CASE_STAGES}
-        />
-
+        <FilterSelect label="Owner" value={owner} onChange={setOwner} options={CASE_OWNERS} />
+        <FilterSelect label="Status" value={status} onChange={setStatus} options={CASE_STATUSES} />
         <span className="ml-auto text-sm text-muted-foreground">
           {filtered.length} de {cases.length}
         </span>
       </div>
 
-      {/* Tabela */}
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[92px]">Caso</TableHead>
-            <TableHead>Resumo</TableHead>
-            <TableHead className="w-[120px]">Owner</TableHead>
-            <TableHead className="w-[150px]">Stage</TableHead>
-            <TableHead className="w-[130px]">Valor</TableHead>
-            <TableHead className="w-[110px]">Prazo</TableHead>
-            <TableHead className="w-[190px]">Flags</TableHead>
+            <TableHead className="w-[88px]">Caso</TableHead>
+            <TableHead className="min-w-[240px]">Resumo</TableHead>
+            <TableHead className="w-[120px]">Reportado</TableHead>
+            <TableHead className="w-[130px]">Owner</TableHead>
+            <TableHead className="w-[200px]">Status</TableHead>
+            <TableHead className="w-[120px]">Valor</TableHead>
+            <TableHead className="w-[150px]">Prazo</TableHead>
+            <TableHead className="w-[180px]">Flags</TableHead>
+            <TableHead className="w-[110px]">Atualizado</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filtered.length === 0 ? (
             <TableRow>
-              <TableCell
-                colSpan={7}
-                className="py-10 text-center text-muted-foreground"
-              >
+              <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                 Nenhum caso encontrado.
               </TableCell>
             </TableRow>
           ) : (
             filtered.map((c) => (
-              <TableRow
-                key={c.id}
-                onClick={() => setSelected(c)}
-                className="cursor-pointer"
-              >
+              <TableRow key={c.id} onClick={() => setSelected(c)} className="cursor-pointer">
                 <TableCell className="font-mono text-xs text-secondary-foreground">
                   {c.case_number}
                 </TableCell>
                 <TableCell className="max-w-[420px]">
                   <span className="line-clamp-2 text-foreground">
                     {c.summary ?? (
-                      <span className="italic text-muted-foreground">
-                        Sem resumo
-                      </span>
+                      <span className="italic text-muted-foreground">Sem resumo</span>
                     )}
                   </span>
                 </TableCell>
                 <TableCell>
-                  <OwnerBadge owner={c.current_owner} />
+                  <InlineSelect caseId={c.id} field="reported_by" value={c.reported_by}
+                    options={TEAM_AREAS} area={area} />
                 </TableCell>
                 <TableCell>
-                  <StageBadge stage={c.stage} />
+                  <InlineSelect caseId={c.id} field="current_owner" value={c.current_owner}
+                    options={CASE_OWNERS} area={area} />
+                </TableCell>
+                <TableCell>
+                  <InlineSelect caseId={c.id} field="status" value={c.status}
+                    options={CASE_STATUSES} area={area}
+                    colorClass={VARIANT_TEXT[STATUS_VARIANT[c.status]]} />
                 </TableCell>
                 <TableCell className="tabular-nums text-secondary-foreground">
                   {formatAmount(c.amount)}
                 </TableCell>
-                <TableCell className="tabular-nums text-secondary-foreground">
-                  {formatDate(c.due_date)}
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <InlineDate caseId={c.id} field="due_date" value={c.due_date} area={area} />
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
-                    {c.is_duplicate && (
-                      <DuplicateBadge related={c.related_cases} />
-                    )}
-                    {c.missing_info.length > 0 && (
-                      <MissingInfoBadge missing={c.missing_info} />
-                    )}
+                    {c.dup_order && <DupOrderBadge cases={c.dup_order_cases} />}
+                    {c.dup_e2e && <DupE2eBadge cases={c.dup_e2e_cases} />}
+                    {c.missing_info.length > 0 && <MissingInfoBadge missing={c.missing_info} />}
                   </div>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {c.last_updated_by ?? "—"}
                 </TableCell>
               </TableRow>
             ))
@@ -155,6 +151,7 @@ export function CasesTable({ cases }: { cases: EnrichedCase[] }) {
 
       <CaseDrawer
         caseItem={selected}
+        area={area}
         open={selected !== null}
         onClose={() => setSelected(null)}
       />
@@ -162,7 +159,6 @@ export function CasesTable({ cases }: { cases: EnrichedCase[] }) {
   );
 }
 
-/** Select simples de filtro, com opção "Todos". */
 function FilterSelect({
   label,
   value,

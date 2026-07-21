@@ -48,9 +48,40 @@ Depois abra `http://localhost:3000` no navegador. Você verá a tela-hub com os 
 - **Banco:** enums, tabela `cases`, numeração automática `UC-001…`, `updated_at` automático, view `cases_enriched` (calcula duplicidade / relacionados / o que falta) e 3 casos de exemplo.
 - **Front:** estrutura do Next.js com a paleta Binance (dark) e a tela-hub lendo da view, com busca e filtros por owner e stage.
 
-## O que vem depois
+## v2 — login por área, auditoria e polish
 
-- Drawer de detalhe com edição e os 4 pareceres por área.
-- Tela de "novo caso" (registro parcial).
-- Deploy na Vercel.
-- **v1.1:** login e RLS por papel (hoje sem login — ferramenta interna). Ver o TODO no fim de `0001_init.sql`.
+O v2 adiciona login por área, histórico de alterações, novo conjunto de status
+e melhorias de UX. Para ativá-lo, além dos passos acima:
+
+### A. Rodar a migration do v2
+
+No **SQL Editor** do Supabase, abra `supabase/migrations/0002_v2_auth_audit.sql`,
+cole todo o conteúdo e clique em **Run**. Isso atualiza o banco (novo status,
+tabelas de perfil e histórico, RLS).
+
+### B. Criar os 5 logins (uma vez)
+
+No Supabase, vá em **Authentication → Users → Add user** (marque **Auto Confirm
+User**) e crie 5 usuários com estes emails — a área é atribuída automaticamente:
+
+- `cs@tracer.local` → CS
+- `tech@tracer.local` → Tech
+- `treasury@tracer.local` → Treasury
+- `clearing@tracer.local` → Clearing
+- `operations@tracer.local` → Operations
+
+Defina uma senha para cada. Pronto: cada área entra com o seu login em `/login`.
+
+### O que muda na tela
+
+- **Login obrigatório** por área; a área logada aparece no topo, com botão "Sair".
+- **Status** (antes "stage") com: New, In Review, Waiting for Treasury/Clearing/Operations/Tech, Escalated, Resolved.
+- **Edição inline** na tabela: status, owner e reportado por viram menu suspenso; a data abre calendário.
+- **Duplicidade separada**: selo "Dup. Order" e "Dup. E2E" independentes.
+- **Histórico** de alterações (status, owner e pareceres) no drawer, com quem alterou e quando.
+- **"Atualizado por"** é automático (a área logada), não digitado.
+
+## Depois (v2.1+)
+
+- Restrição de parecer por área (cada área só edita o próprio comentário).
+- Dashboard com gráficos, vínculo manual de casos, notificações de prazo, import do CSV, realtime.
