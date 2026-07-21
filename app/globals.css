@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Tracer — tokens da paleta Binance (dark-first).
+  Valores em HSL para casar com o padrão shadcn/ui (hsl(var(--token))).
+  Referência de hex na tabela de "Identidade visual" do contexto do projeto.
+*/
+@layer base {
+  :root {
+    /* Base (dark) */
+    --background: 210 21% 5%;            /* #0B0E11 */
+    --foreground: 216 14% 93%;           /* #EAECEF */
+
+    --card: 225 14% 11%;                 /* #181A20 */
+    --card-foreground: 216 14% 93%;
+
+    --popover: 213 15% 14%;              /* #1E2329 */
+    --popover-foreground: 216 14% 93%;
+
+    --elevated: 213 15% 14%;             /* #1E2329 - drawer, hover de linha */
+
+    --primary: 48 97% 60%;               /* #FCD535 */
+    --primary-hover: 46 91% 49%;         /* #F0B90B */
+    --primary-foreground: 210 21% 5%;    /* #0B0E11 - texto preto sobre amarelo */
+
+    --secondary: 213 15% 14%;            /* #1E2329 */
+    --secondary-foreground: 216 12% 75%; /* #B7BDC6 */
+
+    --muted: 214 14% 20%;                /* #2B3139 */
+    --muted-foreground: 215 11% 56%;     /* #848E9C */
+
+    --accent: 213 15% 14%;
+    --accent-foreground: 216 14% 93%;
+
+    --border: 214 14% 20%;               /* #2B3139 */
+    --input: 214 14% 20%;                /* #2B3139 */
+    --ring: 48 97% 60%;                  /* #FCD535 - foco */
+
+    /* Estados semânticos */
+    --success: 157 87% 43%;              /* #0ECB81 - Resolved */
+    --danger: 352 91% 62%;               /* #F6465D - Overdue / erro */
+    --warning: 46 91% 49%;               /* #F0B90B - Missing info / Waiting */
+    --info: 211 57% 47%;                 /* #3375BB - Need Information */
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    /* Dark-first: sempre escuro no v1. */
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
