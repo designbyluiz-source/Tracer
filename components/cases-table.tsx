@@ -37,6 +37,17 @@ const VARIANT_TEXT: Record<string, string> = {
   success: "text-success",
 };
 
+/**
+ * Buckets de andamento (recorte visual, sem mexer no banco). Cada aba é só um
+ * filtro por cima da mesma tabela; owner/status/busca seguem valendo dentro.
+ */
+const BUCKETS: { id: string; label: string; match: (c: EnrichedCase) => boolean }[] = [
+  { id: "open", label: "Em aberto", match: (c) => c.status !== "Resolved" },
+  { id: "escalated", label: "Escalados", match: (c) => c.status === "Escalated" },
+  { id: "resolved", label: "Resolvidos", match: (c) => c.status === "Resolved" },
+  { id: "all", label: "Todos", match: () => true },
+];
+
 export function CasesTable({
   cases,
   area,
@@ -44,14 +55,25 @@ export function CasesTable({
   cases: EnrichedCase[];
   area: TeamArea;
 }) {
+  const [bucket, setBucket] = useState<string>("open");
   const [query, setQuery] = useState("");
   const [owner, setOwner] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
   const [selected, setSelected] = useState<EnrichedCase | null>(null);
 
+  // Contador de cada aba (sempre sobre a lista completa).
+  const counts = useMemo(
+    () =>
+      Object.fromEntries(BUCKETS.map((b) => [b.id, cases.filter(b.match).length])),
+    [cases]
+  );
+
+  const activeBucket = BUCKETS.find((b) => b.id === bucket) ?? BUCKETS[0];
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return cases.filter((c) => {
+      if (!activeBucket.match(c)) return false;
       if (owner !== "all" && c.current_owner !== owner) return false;
       if (status !== "all" && c.status !== status) return false;
       if (!q) return true;
@@ -59,10 +81,41 @@ export function CasesTable({
         .filter(Boolean)
         .some((v) => v!.toLowerCase().includes(q));
     });
-  }, [cases, query, owner, status]);
+  }, [cases, activeBucket, query, owner, status]);
 
   return (
     <div className="space-y-4">
+      {/* Abas por bucket de andamento */}
+      <div className="flex flex-wrap items-center gap-1 border-b border-border">
+        {BUCKETS.map((b) => {
+          const active = b.id === bucket;
+          return (
+            <button
+              key={b.id}
+              onClick={() => setBucket(b.id)}
+              className={
+                "relative -mb-px flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors " +
+                (active
+                  ? "border-b-2 border-primary text-primary"
+                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground")
+              }
+            >
+              {b.label}
+              <span
+                className={
+                  "rounded-full px-1.5 py-0.5 text-xs " +
+                  (active
+                    ? "bg-primary/15 text-primary"
+                    : "bg-muted text-muted-foreground")
+                }
+              >
+                {counts[b.id]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-[220px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

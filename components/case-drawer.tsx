@@ -142,7 +142,7 @@ function DrawerInner({
         </p>
       )}
 
-      <CaseFields values={values} set={set} mode="edit" />
+      <CaseFields values={values} set={set} mode="edit" area={area} />
 
       <section className="mt-6 border-t border-border pt-4">
         <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">

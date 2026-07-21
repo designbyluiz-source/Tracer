@@ -115,14 +115,24 @@ export function useCaseForm(area: TeamArea, initial?: CaseRow) {
   return { values, set };
 }
 
+/** Cada parecer só pode ser editado pela sua área dona. */
+const COMMENT_OWNER: Record<string, TeamArea> = {
+  op_comment: "Operations",
+  clearing_comment: "Clearing",
+  treasury_comment: "Treasury",
+  tech_comment: "Tech",
+};
+
 export function CaseFields({
   values,
   set,
   mode,
+  area,
 }: {
   values: CaseFormValues;
   set: <K extends keyof CaseFormValues>(k: K, v: CaseFormValues[K]) => void;
   mode: "create" | "edit";
+  area: TeamArea;
 }) {
   return (
     <div className="space-y-5">
@@ -197,14 +207,22 @@ export function CaseFields({
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Pareceres por área
         </p>
-        <CommentField label="Operations" value={values.op_comment}
-          onChange={(v) => set("op_comment", v)} />
-        <CommentField label="Clearing" value={values.clearing_comment}
-          onChange={(v) => set("clearing_comment", v)} />
-        <CommentField label="Treasury" value={values.treasury_comment}
-          onChange={(v) => set("treasury_comment", v)} />
-        <CommentField label="Tech" value={values.tech_comment}
-          onChange={(v) => set("tech_comment", v)} />
+        {(
+          [
+            ["Operations", "op_comment"],
+            ["Clearing", "clearing_comment"],
+            ["Treasury", "treasury_comment"],
+            ["Tech", "tech_comment"],
+          ] as const
+        ).map(([label, field]) => (
+          <CommentField
+            key={field}
+            label={label}
+            value={values[field]}
+            editable={COMMENT_OWNER[field] === area}
+            onChange={(v) => set(field, v)}
+          />
+        ))}
       </section>
     </div>
   );
@@ -213,17 +231,31 @@ export function CaseFields({
 function CommentField({
   label,
   value,
+  editable,
   onChange,
 }: {
   label: string;
   value: string;
+  editable: boolean;
   onChange: (v: string) => void;
 }) {
   return (
     <label className="block space-y-1">
-      <span className="text-xs font-medium text-secondary-foreground">{label}</span>
-      <textarea className={`${controlClass} min-h-[52px] resize-y`} value={value}
-        onChange={(e) => onChange(e.target.value)} />
+      <span className="flex items-center gap-1.5 text-xs font-medium text-secondary-foreground">
+        {label}
+        {!editable && (
+          <span className="text-[10px] font-normal text-muted-foreground">
+            (só {label} edita)
+          </span>
+        )}
+      </span>
+      <textarea
+        className={`${controlClass} min-h-[52px] resize-y`}
+        value={value}
+        disabled={!editable}
+        placeholder={editable ? "" : "Somente esta área pode editar"}
+        onChange={(e) => onChange(e.target.value)}
+      />
     </label>
   );
 }

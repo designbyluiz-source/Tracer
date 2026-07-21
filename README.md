@@ -81,7 +81,19 @@ Defina uma senha para cada. Pronto: cada área entra com o seu login em `/login`
 - **Histórico** de alterações (status, owner e pareceres) no drawer, com quem alterou e quando.
 - **"Atualizado por"** é automático (a área logada), não digitado.
 
-## Depois (v2.1+)
+## v2.1 — trava de parecer por área
 
-- Restrição de parecer por área (cada área só edita o próprio comentário).
+Cada área só edita o seu próprio parecer (Operations → parecer de Operations, e
+assim por diante). Na tela, os campos das outras áreas ficam desabilitados; no
+banco, um bloqueio impede a gravação mesmo por fora da tela.
+
+Para ativar: no **SQL Editor** do Supabase, rode
+`supabase/migrations/0003_comment_area_lock.sql`.
+
+## v3 (em andamento)
+
+- **Abas por bucket** na tabela: Em aberto · Escalados · Resolvidos · Todos, com contador. (feito)
+
+## Depois
+
 - Dashboard com gráficos, vínculo manual de casos, notificações de prazo, import do CSV, realtime.

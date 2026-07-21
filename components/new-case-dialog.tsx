@@ -104,7 +104,7 @@ function NewCaseForm({
           Erro ao criar: {error}
         </p>
       )}
-      <CaseFields values={values} set={set} mode="create" />
+      <CaseFields values={values} set={set} mode="create" area={area} />
     </Sheet>
   );
 }
